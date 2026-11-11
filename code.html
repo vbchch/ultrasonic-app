@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultrasonic Insect IoT Controller</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Kanit & Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f',
+                        },
+                        actGold: '#C28B1E',
+                        actDarkGold: '#8C5E00',
+                    },
+                    fontFamily: {
+                        sans: ['Kanit', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #0f172a;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(217, 119, 6, 0.4);
+            border-radius: 4px;
+        }
+        
+        /* Pulse & Glow Effects */
+        .glow-gold {
+            box-shadow: 0 0 25px rgba(217, 119, 6, 0.4);
+        }
+        .glow-pulse {
+            animation: pulseGlow 2s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(217, 119, 6, 0.2); }
+            100% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.6); }
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Wave Canvas */
+        #waveCanvas {
+            width: 100%;
+            height: 100px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex items-center justify-center p-2 sm:p-4">
+
+    <!-- Mobile Screen Simulator Container -->
+    <div class="w-full max-w-md bg-slate-900 rounded-[40px] border-4 border-slate-700 shadow-2xl overflow-hidden flex flex-col relative min-h-[844px] max-h-[920px]">
+        
+        <!-- Top Mobile Notch / Bar -->
+        <div class="bg-slate-900 px-6 pt-3 pb-2 flex justify-between items-center text-xs text-slate-400 select-none border-b border-slate-800/50 z-20">
+            <span class="font-medium">09:41</span>
+            <div class="w-20 h-4 bg-slate-800 rounded-full mx-auto flex items-center justify-center gap-1">
+                <div class="w-2 h-2 rounded-full bg-slate-600"></div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-wifi"></i>
+                <i class="fa-solid fa-battery-full text-amber-500"></i>
+            </div>
+        </div>
+
+        <!-- Scrollable App Content -->
+        <div class="flex-1 overflow-y-auto px-4 py-3 space-y-4 pb-20">
+            
+            <!-- Header Section -->
+            <div class="flex items-center justify-between pt-1">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full">B89 Project</span>
+                        <span id="connectionBadge" class="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> ออนไลน์
+                        </span>
+                    </div>
+                    <h1 class="text-xl font-bold text-white tracking-wide mt-1">ULTRASONIC INSECT</h1>
+                    <p class="text-xs text-amber-400 font-medium">อุปกรณ์คลื่นความถี่ไล่แมลงอัจฉริยะ</p>
+                </div>
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-600/30">
+                    <i class="fa-solid fa-bolt-lightning text-slate-900 text-lg"></i>
+                </div>
+            </div>
+
+            <!-- Main Power & Visualizer Card -->
+            <div id="mainStatusCard" class="glass-card rounded-3xl p-5 relative overflow-hidden border border-amber-500/20 transition-all duration-300 glow-pulse">
+                
+                <!-- Card Background Accent Glow -->
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex justify-between items-start mb-2 relative z-10">
+                    <div>
+                        <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">ความถี่ปัจจุบัน</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span id="frequencyDisplay" class="text-4xl font-extrabold text-white tracking-tight">42.5</span>
+                            <span class="text-lg font-bold text-amber-500">kHz</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Power Toggle Button -->
+                    <button id="powerBtn" onclick="togglePower()" class="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-slate-950 font-bold shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all">
+                        <i class="fa-solid fa-power-off text-2xl"></i>
+                    </button>
+                </div>
+
+                <!-- Animated Wave Canvas Visualizer -->
+                <div class="relative my-2 bg-slate-950/50 rounded-2xl p-2 border border-slate-800">
+                    <canvas id="waveCanvas"></canvas>
+                    <div id="offlineOverlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-2xl flex items-center justify-center text-slate-400 text-xs font-medium">
+                        <i class="fa-solid fa-pause-circle text-amber-500 mr-2 text-sm"></i> อุปกรณ์หยุดทำงาน
+                    </div>
+                </div>
+
+                <!-- AI Dynamic Frequency Banner -->
+            <div class="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-white">ระบบ AI ปรับความถี่อัตโนมัติ</div>
+                        <div class="text-[10px] text-slate-400">ป้องกันแมลงดื้อคลื่นความถี่</div>
+                    </div>
+                </div>
+                <!-- Toggle Switch AI -->
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="aiToggle" class="sr-only peer" checked onchange="toggleAI(this.checked)">
+                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Insect Target Presets (Mode Selector - Extended Options) -->
+        <div>
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">เลือกโหมดเป้าหมายการไล่ (Target Modes)</h3>
+                <span class="text-[11px] text-amber-500 font-medium" id="currentPresetName">ยุง (Mosquito)</span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2">
+                <!-- Preset 1: Mosquito (Original) -->
+                <button onclick="selectPreset('mosquito', 38.5, 'ยุง (Mosquito)')" id="preset-mosquito" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-amber-500/50 bg-amber-500/10 text-amber-400 transition-all">
+                    <i class="fa-solid fa-mosquito text-lg"></i>
+                    <span class="text-[11px] font-medium">ยุง</span>
+                    <span class="text-[9px] text-slate-400">35-45 kHz</span>
+                </button>
+                
+                <!-- Preset 2: Cockroach (Original) -->
+                <button onclick="selectPreset('cockroach', 28.0, 'แมลงสาบ (Cockroach)')" id="preset-cockroach" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-bug text-lg"></i>
+                    <span class="text-[11px] font-medium">แมลงสาบ</span>
+                    <span class="text-[9px] text-slate-400">25-32 kHz</span>
+                </button>
+
+                <!-- Preset 3: Fly (Original) -->
+                <button onclick="selectPreset('fly', 48.0, 'แมลงวัน (Fly)')" id="preset-fly" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-fly text-lg"></i>
+                    <span class="text-[11px] font-medium">แมลงวัน</span>
+                    <span class="text-[9px] text-slate-400">45-55 kHz</span>
+                </button>
+
+                <!-- Preset 4: Rodent (Original) -->
+                <button onclick="selectPreset('rodent', 60.0, 'หนู (Rodent)')" id="preset-rodent" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-locust text-lg"></i>
+                    <span class="text-[11px] font-medium">หนู</span>
+                    <span class="text-[9px] text-slate-400">55-65 kHz</span>
+                </button>
+
+                <!-- Preset 5: Ant (New) -->
+                <button onclick="selectPreset('ant', 34.0, 'มด (Ants)')" id="preset-ant" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-cubes-stacked text-lg"></i>
+                    <span class="text-[11px] font-medium">มด</span>
+                    <span class="text-[9px] text-slate-400">30-38 kHz</span>
+                </button>
+
+                <!-- Preset 6: Moth/Termite (New) -->
+                <button onclick="selectPreset('moth', 44.0, 'แมลงเม่า / ปลวก')" id="preset-moth" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-shield-cat text-lg"></i>
+                    <span class="text-[11px] font-medium">แมลงเม่า/ปลวก</span>
+                    <span class="text-[9px] text-slate-400">40-50 kHz</span>
+                </button>
+
+                <!-- Preset 7: Spider (New) -->
+                <button onclick="selectPreset('spider', 26.5, 'แมงมุม (Spider)')" id="preset-spider" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-spider text-lg"></i>
+                    <span class="text-[11px] font-medium">แมงมุม</span>
+                    <span class="text-[9px] text-slate-400">22-28 kHz</span>
+                </button>
+
+                <!-- Preset 8: Flea / Tick (New) -->
+                <button onclick="selectPreset('flea', 54.0, 'เห็บ / หมัด (Fleas)')" id="preset-flea" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all">
+                    <i class="fa-solid fa-shield-dog text-lg"></i>
+                    <span class="text-[11px] font-medium">เห็บ / หมัด</span>
+                    <span class="text-[9px] text-slate-400">50-60 kHz</span>
+                </button>
+
+                <!-- Preset 9: All Pests Combo Sweep Mode (New) -->
+                <button onclick="selectPreset('allPests', 45.0, 'ครอบคลุมรวม (All-Pests)')" id="preset-allPests" class="preset-btn glass-card p-2.5 rounded-2xl flex flex-col items-center justify-center gap-1 border border-transparent text-slate-300 hover:border-slate-700 transition-all bg-gradient-to-br hover:from-amber-500/20 hover:to-transparent">
+                    <i class="fa-solid fa-bullseye text-lg text-amber-400"></i>
+                    <span class="text-[11px] font-medium text-amber-300">ไล่รวมทุกชนิด</span>
+                    <span class="text-[9px] text-amber-400/80">Auto Scan</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Manual Frequency Range Slider (25 - 65 kHz) -->
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold text-slate-300">ปรับความถี่ด้วยตนเอง (Manual Adjust)</span>
+                    <span class="text-xs font-bold text-amber-400" id="sliderValDisplay">42.5 kHz</span>
+                </div>
+                <input type="range" id="freqSlider" min="25" max="65" step="0.5" value="42.5" 
+                    oninput="updateManualFrequency(this.value)"
+                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-medium">
+                    <span>25 kHz (ต่ำสุด)</span>
+                    <span>45 kHz</span>
+                    <span>65 kHz (สูงสุด)</span>
+                </div>
+            </div>
+
+            <!-- Timer & Quick Schedule -->
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-regular fa-clock text-amber-500"></i>
+                        <h3 class="text-xs font-bold text-slate-200">ตั้งเวลาเปิดใช้งานอัตโนมัติ</h3>
+                    </div>
+                    <span id="activeTimerText" class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">เปิดต่อเนื่อง</span>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setTimer(1, this)" class="timer-btn py-2 text-xs rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/50 hover:border-amber-500/50 transition-all">1 ชม.</button>
+                    <button onclick="setTimer(2, this)" class="timer-btn py-2 text-xs rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/50 hover:border-amber-500/50 transition-all">2 ชม.</button>
+                    <button onclick="setTimer(4, this)" class="timer-btn py-2 text-xs rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/50 hover:border-amber-500/50 transition-all">4 ชม.</button>
+                    <button onclick="setTimer(0, this)" class="timer-btn py-2 text-xs rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 font-semibold transition-all">ตลอดเวลา</button>
+                </div>
+            </div>
+
+            <!-- Activity Logs Panel -->
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-slate-400 text-xs"></i>
+                        <h3 class="text-xs font-bold text-slate-300">ประวัติการทำงานอุปกรณ์ (Activity Log)</h3>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                </div>
+                <div id="logContainer" class="space-y-2 max-h-24 overflow-y-auto pr-1 text-[11px] text-slate-400">
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-300"><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i>เปิดอุปกรณ์สำเร็จ (Wi-Fi connected)</span>
+                        <span class="text-[9px] text-slate-500">เมื่อครู่</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <span class="text-slate-300"><i class="fa-solid fa-robot text-amber-400 mr-1.5"></i>AI ปรับช่วงความถี่เป็น 42.5 kHz</span>
+                        <span class="text-[9px] text-slate-500">2 นาทีที่แล้ว</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SDG Goals & Eco Impact Banner -->
+            <div class="bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 rounded-2xl p-3.5 border border-amber-600/30 flex items-center justify-between">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold rounded">SDGs</span>
+                        <span class="text-xs font-bold text-white">นวัตกรรมเป็นมิตรต่อสิ่งแวดล้อม</span>
+                    </div>
+                    <p class="text-[10px] text-slate-300">ไล่แต่ไม่ฆ่า ไม่เป็นอันตรายต่อคนและสัตว์เลี้ยง</p>
+                </div>
+                <!-- Mini SDG Badges -->
+                <div class="flex gap-1">
+                    <div class="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shadow" title="SDG 15: Life on Land">15</div>
+                    <div class="w-7 h-7 bg-green-500 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shadow" title="SDG 3: Good Health">3</div>
+                    <div class="w-7 h-7 bg-amber-600 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shadow" title="SDG 11: Sustainable Cities">11</div>
+                </div>
+            </div>
+
+            <!-- Project Credits (Footer Info) -->
+            <div class="text-center text-[10px] text-slate-500 py-2">
+                พัฒนาโดย นักเรียนชั้น ม.2/3 (เลขที่ 3, 19, 25, 31) <br>
+                ศูนย์เทคโนโลยีและนวัตกรรม ACT Innotech Center
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Navigation Bar -->
+        <div class="absolute bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 px-6 py-2.5 flex justify-around items-center z-30">
+            <button class="flex flex-col items-center gap-1 text-amber-500">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[9px] font-medium">หน้าหลัก</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-chart-line text-base"></i>
+                <span class="text-[9px] font-medium">สถิติ</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-sliders text-base"></i>
+                <span class="text-[9px] font-medium">ปรับแต่ง</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-user-shield text-base"></i>
+                <span class="text-[9px] font-medium">โปรไฟล์</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- JavaScript logic -->
+    <script>
+        // State Variables
+        let isPowerOn = true;
+        let isAiActive = true;
+        let currentFreq = 42.5;
+        let currentPreset = 'mosquito';
+        let aiInterval = null;
+        let animFrameId = null;
+
+        // Canvas Setup for Ultrasonic Wave Animation
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        let step = 0;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth - 16;
+            canvas.height = 90;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Draw Sine Wave Animation representing Frequency Output
+        function drawWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!isPowerOn) return;
+
+            ctx.beginPath();
+            ctx.lineWidth = 2.5;
+            
+            // Dynamic Stroke Color based on Frequency
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, '#f59e0b');
+            gradient.addColorStop(0.5, '#fbbf24');
+            gradient.addColorStop(1, '#d97706');
+            ctx.strokeStyle = gradient;
+
+            const height = canvas.height;
+            const width = canvas.width;
+
+            // Map frequency (25 - 65 kHz) to wave length & amplitude
+            const frequencyMultiplier = currentFreq / 10; 
+            const amplitude = Math.min(25, 10 + (currentFreq / 4));
+
+            for (let x = 0; x < width; x++) {
+                const y = Math.sin((x * 0.05 * frequencyMultiplier) + step) * amplitude + (height / 2);
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+
+            ctx.stroke();
+
+            // Glow Effect
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(245, 158, 11, 0.6)';
+
+            step += 0.08;
+            animFrameId = requestAnimationFrame(drawWave);
+        }
+
+        // Toggle Power Switch
+        function togglePower() {
+            isPowerOn = !isPowerOn;
+            const powerBtn = document.getElementById('powerBtn');
+            const mainCard = document.getElementById('mainStatusCard');
+            const offlineOverlay = document.getElementById('offlineOverlay');
+            const connectionBadge = document.getElementById('connectionBadge');
+
+            if (isPowerOn) {
+                powerBtn.classList.remove('from-slate-700', 'to-slate-800', 'text-slate-500', 'shadow-none');
+                powerBtn.classList.add('from-amber-500', 'to-amber-700', 'text-slate-950', 'shadow-amber-500/30');
+                mainCard.classList.add('glow-pulse', 'border-amber-500/20');
+                mainCard.classList.remove('border-slate-800');
+                offlineOverlay.classList.add('hidden');
+                
+                connectionBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> ออนไลน์`;
+                connectionBadge.className = 'flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20';
+                
+                addLog('เปิดอุปกรณ์ทำงานแล้ว');
+                drawWave();
+                if(isAiActive) startAiLoop();
+            } else {
+                powerBtn.classList.remove('from-amber-500', 'to-amber-700', 'text-slate-950', 'shadow-amber-500/30');
+                powerBtn.classList.add('from-slate-700', 'to-slate-800', 'text-slate-500', 'shadow-none');
+                mainCard.classList.remove('glow-pulse', 'border-amber-500/20');
+                mainCard.classList.add('border-slate-800');
+                offlineOverlay.classList.remove('hidden');
+
+                connectionBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> ปิดใช้งาน`;
+                connectionBadge.className = 'flex items-center gap-1 text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700';
+
+                addLog('ปิดอุปกรณ์เรียบร้อย');
+                cancelAnimationFrame(animFrameId);
+                clearInterval(aiInterval);
+            }
+        }
+
+        // AI Dynamic Frequency Shift Loop
+        function startAiLoop() {
+            clearInterval(aiInterval);
+            if (!isAiActive || !isPowerOn) return;
+
+            aiInterval = setInterval(() => {
+                // Slightly fluctuate frequency around baseline to prevent pest adaptation
+                const delta = (Math.random() * 4 - 2).toFixed(1);
+                let newFreq = (parseFloat(currentFreq) + parseFloat(delta)).toFixed(1);
+                
+                // Keep bounds
+                if (newFreq < 25) newFreq = 25.5;
+                if (newFreq > 65) newFreq = 64.5;
+
+                updateDisplayFrequency(newFreq);
+                addLog(`AI สลับคลื่นเป็น ${newFreq} kHz เพื่อป้องกันแมลงดื้อคลื่น`);
+            }, 5000);
+        }
+
+        // Toggle AI Mode
+        function toggleAI(enabled) {
+            isAiActive = enabled;
+            if (enabled) {
+                addLog('เปิดใช้งานโหมด AI สลับความถี่');
+                startAiLoop();
+            } else {
+                addLog('ปิดโหมด AI (ใช้คลื่นความถี่คงที่)');
+                clearInterval(aiInterval);
+            }
+        }
+
+        // Select Preset Mode
+        function selectPreset(id, baseFreq, name) {
+            currentPreset = id;
+            currentFreq = baseFreq;
+
+            // Update UI Button Styles
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('border-amber-500/50', 'bg-amber-500/10', 'text-amber-400');
+                btn.classList.add('border-transparent', 'text-slate-300');
+            });
+
+            const activeBtn = document.getElementById(`preset-${id}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-slate-300');
+                activeBtn.classList.add('border-amber-500/50', 'bg-amber-500/10', 'text-amber-400');
+            }
+
+            document.getElementById('currentPresetName').innerText = name;
+            document.getElementById('freqSlider').value = baseFreq;
+            updateDisplayFrequency(baseFreq);
+
+            addLog(`เปลี่ยนโหมดไล่: ${name} (${baseFreq} kHz)`);
+        }
+
+        // Manual Slider Change
+        function updateManualFrequency(val) {
+            currentFreq = parseFloat(val).toFixed(1);
+            document.getElementById('sliderValDisplay').innerText = `${currentFreq} kHz`;
+            updateDisplayFrequency(currentFreq);
+        }
+
+        function updateDisplayFrequency(val) {
+            document.getElementById('frequencyDisplay').innerText = val;
+            document.getElementById('sliderValDisplay').innerText = `${val} kHz`;
+        }
+
+        // Timer Control
+        function setTimer(hours, btnElement) {
+            document.querySelectorAll('.timer-btn').forEach(btn => {
+                btn.className = 'timer-btn py-2 text-xs rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/50 hover:border-amber-500/50 transition-all';
+            });
+
+            btnElement.className = 'timer-btn py-2 text-xs rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 font-semibold transition-all';
+
+            const timerText = document.getElementById('activeTimerText');
+            if (hours === 0) {
+                timerText.innerText = 'เปิดต่อเนื่อง';
+                addLog('ตั้งเวลา: เปิดใช้งานตลอดเวลา');
+            } else {
+                timerText.innerText = `ปิดในอีก ${hours} ชม.`;
+                addLog(`ตั้งเวลาปิดอัตโนมัติใน ${hours} ชั่วโมง`);
+            }
+        }
+
+        // Add Log Item
+        function addLog(message) {
+            const container = document.getElementById('logContainer');
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800 text-[11px] animate-fade-in';
+            item.innerHTML = `
+                <span class="text-slate-300"><i class="fa-solid fa-circle-info text-amber-400 mr-1.5"></i>${message}</span>
+                <span class="text-[9px] text-slate-500">${timeStr}</span>
+            `;
+
+            container.insertBefore(item, container.firstChild);
+
+            // Keep only top 5 logs
+            if (container.children.length > 5) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        // Initialize App on Page Load
+        window.onload = function() {
+            drawWave();
+            startAiLoop();
+        };
+    </script>
+</body>
+</html>
